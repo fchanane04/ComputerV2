@@ -10,6 +10,7 @@ functions = {}
 
 def function_syntax_parser(function):
     #need to add check if all variables are the same
+    print("function says yee")
     function = re.sub(r'\s+', '', function)
     pattern = r'^[-+*/%^()0-9a-zA-Z]+$'
     if re.match(pattern, function):
@@ -76,10 +77,19 @@ def parse_value(expr):
         print(f"Eval failed: {e}")
         return expr
 
+def shorten_function(function):
+    #not working good on all examples
+    vars = re.findall(r'[+-]?\s*[a-zA-Z_]\w*', function)
+    nums = re.sub(r'[+-]?\s*[a-zA-Z_]\w*', '', function)
+    try: val = eval(nums)
+    except: val = nums.strip()
+    return str(val) + ''.join(' ' + v.strip() for v in vars)
+
 def handle_assignment(left, right):
     if is_function_definition(left):
         fname = left[:left.index('(')].lower()
         param = left[left.index('(') + 1 : left.index(')')]
+        right = shorten_function(right)
         functions[fname] = {"param": param, "expression": right}
         print(f"[Function] {fname}({param}) = {right}")
     else:
