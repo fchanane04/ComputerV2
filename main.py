@@ -8,6 +8,63 @@ variables = {}
 functions = {}
 
 
+def evaluate_expression(expr, context=None):
+    if context is None:
+        context = {}
+    
+    # Handle simple cases first
+    if expr.isdigit():
+        return int(expr)
+    
+    # Handle variables
+    if expr in variables:
+        return variables[expr]
+    
+    # Handle basic operations
+    for op in ['+', '-', '*', '/']:
+        if op in expr:
+            left, right = expr.split(op, 1)
+            left_val = evaluate_expression(left.strip(), context)
+            right_val = evaluate_expression(right.strip(), context)
+            
+            if op == '+':
+                return left_val + right_val
+            elif op == '-':
+                return left_val - right_val
+            elif op == '*':
+                return left_val * right_val
+            elif op == '/':
+                return left_val / right_val
+    
+    return expr  # Fallback
+
+def solve_equation(equation):
+    # Simple quadratic solver for ax^2 + bx + c = 0
+    if 'x^2' in equation:
+        parts = equation.split('x^2')
+        a = evaluate_expression(parts[0] or '1')
+        
+        remaining = parts[1].split('x')
+        b = evaluate_expression(remaining[0] or '1')
+        c = evaluate_expression(remaining[1].split('=')[0])
+        
+        discriminant = b**2 - 4*a*c
+        if discriminant > 0:
+            root1 = (-b + discriminant**0.5)/(2*a)
+            root2 = (-b - discriminant**0.5)/(2*a)
+            return [root1, root2]
+        elif discriminant == 0:
+            return [-b/(2*a)]
+        else:
+            real = -b/(2*a)
+            imag = (-discriminant)**0.5/(2*a)
+            return [MyComplex(real, imag), MyComplex(real, -imag)]
+    
+    # Linear equation case
+    elif 'x' in equation:
+        # Implement similar logic for bx + c = 0
+        pass
+
 def function_syntax_parser(function):
     #need to add check if all variables are the same
     print("function says yee")
@@ -54,28 +111,29 @@ def parse_matrix(expr):
         return None
 
 def parse_value(expr):
-    expr = expr.replace('i', 'j')  # Convert imaginary i to Python's j
-    if expr.startswith('[[') and expr.endswith(']]'):
-        matrix = parse_matrix(expr)
-        print(matrix)
-        if matrix:
-            return matrix
-        else:
-            print("Invalid matrix syntax.")
-            return expr
+    # Handle matrices first
+    if expr.startswith('[['):
+        return parse_matrix(expr)
+    
+    # Handle complex numbers
+    if 'i' in expr:
+        parts = expr.replace(' ', '').split('+')
+        real = float(parts[0]) if parts[0] else 0
+        imag = float(parts[1].replace('i', '')) if len(parts) > 1 else 0
+        return MyComplex(real, imag)
+    
+    # Handle fractions
+    if '/' in expr:
+        num, den = map(int, expr.split('/'))
+        return Rational(num, den)
+    
+    # Handle regular numbers
     try:
-        value = eval(expr, {}, {**variables, "j": 1j})
-        print(f"Evaluated value: {value} (type: {type(value)})")
-        if isinstance(value, complex):
-            imag_part = value.imag
-            real_part = value.real
-            print(imag_part)
-            print(real_part)
-            print("this is a complex number")
-        return value
-    except Exception as e:
-        print(f"Eval failed: {e}")
-        return expr
+        if '.' in expr:
+            return float(expr)
+        return int(expr)
+    except ValueError:
+        return expr  # Return as string if not a number
 
 def shorten_function(function):
     #not working good on all examples
@@ -111,30 +169,37 @@ def handle_expression(expr):
 print("EXIT : exit the program")
 while True:
     try:
-        line = input(">").strip()
+        line = input("> ").strip()
         if not line:
             continue
-        if line == "EXIT":#exit by keyword
-            sys.exit("bye Patricia")
-        if line.endswith("= ?"):
-            expression = line[:-3].strip()
-            print(expression)
-            handle_expression(expression)
-        elif line.endswith("=?"):
-            expression = line[:-2].strip()
-            print(expression)
-            handle_expression(expression)
+            
+        if line.lower() == 'exit':
+            break
+            
+        if '=' in line:
+            if '?' in line:  # Equation solving
+                equation = line.split('=')[0].strip()
+                solutions = solve_equation(equation)
+                print("Solutions:", solutions)
+            else:  # Normal assignment
+                left, right = line.split('=', 1)
+                left = left.strip().lower()
+                
+                if '(' in left:  # Function
+                    func_name = left.split('(')[0]
+                    param = left.split('(')[1].split(')')[0]
+                    functions[func_name] = {'param': param, 'expr': right.strip()}
+                    print(f"Function {func_name}({param}) defined")
+                else:  # Variable
+                    value = evaluate_expression(right.strip())
+                    variables[left] = value
+                    print(f"{left} = {value}")
         else:
-            left, right = parse_assignment(line)
-            typ = variable_parser(left)
-            if typ == "function":
-                function_syntax_parser(right)
-            #print(typ)
-            #print(f"this is the value of the variable : |{right}|")
-            handle_assignment(left, right)
-    except KeyboardInterrupt:
-        print("\nExiting.")
-        break
+            result = evaluate_expression(line)
+            print(result)
+            
+    except Exception as e:
+        print(f"Error: {e}")
 
 #when assigning to a variable a value with another variable the uppercase is conidered new variable
 #need to work on when to calculate a variable using a function
