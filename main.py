@@ -2,6 +2,10 @@ import signal
 import sys
 import re
 
+from custom_types.matrix import Matrix
+from custom_types.mycomplex import MyComplex  
+from custom_types.rational import Rational
+
 typ = "None"
 
 variables = {}
